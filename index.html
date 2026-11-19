@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สแกนเช็กชื่อ - TADIKA SMART ATTENDANCE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            emeraldDark: '#064e3b',
+            islamicGold: '#d4af37'
+          },
+          fontFamily: { sans: ['Prompt', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    .islamic-pattern {
+      background-color: #064e3b;
+      background-image: radial-gradient(rgba(212, 175, 55, 0.14) 1px, transparent 1px),
+                        radial-gradient(rgba(212, 175, 55, 0.1) 1px, #064e3b 1px);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-4">
+
+  <div class="max-w-md mx-auto space-y-4">
+    <!-- การ์ดสแกน QR -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+      <div class="islamic-pattern text-white px-5 py-4 text-center border-b-2 border-islamicGold">
+        <div class="text-islamicGold text-xs font-semibold mb-1">
+          <i class="fa-solid fa-mosque mr-1"></i> TADIKA SMART ATTENDANCE
+        </div>
+        <h1 class="text-xl font-bold"><i class="fa-solid fa-qrcode mr-2 text-islamicGold"></i>สแกนเช็กชื่อนักเรียน</h1>
+      </div>
+
+      <div class="p-5 flex flex-col items-center">
+        <!-- กรอบกล้อง -->
+        <div id="reader" class="w-full rounded-xl overflow-hidden border-4 border-emerald-100 bg-gray-950 min-h-[280px] relative flex items-center justify-center">
+          <span class="text-gray-300 text-sm text-center px-4" id="camera-placeholder">
+            <i class="fa-solid fa-camera text-3xl text-islamicGold block mb-2"></i>
+            กดปุ่ม "เริ่มเปิดกล้อง" เพื่อสแกน
+          </span>
+        </div>
+
+        <!-- ปุ่มควบคุม -->
+        <div class="flex gap-3 mt-5 w-full justify-center">
+          <button id="btn-start" onclick="startScanner()" class="bg-emeraldDark text-white px-6 py-3 rounded-full shadow font-bold hover:bg-emerald-900 transition flex items-center gap-2">
+            <i class="fa-solid fa-camera text-islamicGold"></i> เริ่มเปิดกล้อง
+          </button>
+          <button id="btn-stop" onclick="stopScanner()" class="bg-red-600 text-white px-6 py-3 rounded-full shadow font-bold hover:bg-red-700 transition hidden flex items-center gap-2">
+            <i class="fa-solid fa-stop"></i> ปิดกล้อง
+          </button>
+        </div>
+
+        <!-- แสดงผลลัพธ์การสแกน -->
+        <div id="scan-result" class="mt-5 w-full hidden">
+          <div id="result-card" class="p-4 rounded-2xl text-center border-2 transition-all">
+            <div id="result-icon" class="text-4xl mb-1.5"></div>
+            <h3 id="result-name" class="text-lg font-bold text-gray-800">ชื่อ - สกุล</h3>
+            <p id="result-class" class="text-gray-600 text-sm">ชั้นเรียน</p>
+            <div class="mt-2.5">
+              <span id="result-status" class="px-4 py-1 rounded-full text-xs font-bold text-white inline-block">สถานะ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- เช็กชื่อด้วยรหัสนักเรียน -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 border border-gray-200">
+      <h2 class="font-bold text-emeraldDark mb-2.5 text-sm">
+        <i class="fa-solid fa-keyboard mr-1.5 text-islamicGold"></i> เช็กชื่อด้วยรหัส (กรณีลืมบัตร)
+      </h2>
+      <div class="flex gap-2">
+        <input type="text" id="manual-id" placeholder="เช่น TD0001" class="border border-gray-300 rounded-xl px-3.5 py-2 w-full text-sm focus:outline-none focus:border-emeraldDark uppercase">
+        <button onclick="manualCheckIn()" class="bg-emeraldDark text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-emerald-900 whitespace-nowrap">
+          บันทึก
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- เสียงแจ้งเตือน -->
+  <audio id="sound-success" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-error" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // ====== วางลิงก์ Web App URL (/exec) ของคุณที่นี่ ======
+    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw6WlYkNJ_SKNpfJkjzEeL6swrY0E31PTfPu6yyzHAPg7xfkkV5__JKrJvC2qFiZ6T8/exec";
+    // =======================================================
+
+    let html5QrCode = null;
+    let isScanning = false;
+    let lastToken = "";
+    let cooldown = false;
+
+    async function startScanner() {
+      if (isScanning) return;
+      document.getElementById('scan-result').classList.add('hidden');
+      document.getElementById('btn-start').classList.add('hidden');
+      document.getElementById('btn-stop').classList.remove('hidden');
+      document.getElementById('camera-placeholder').style.display = 'none';
+
+      html5QrCode = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 230, height: 230 }, aspectRatio: 1.0 };
+
+      try {
+        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {});
+        isScanning = true;
+      } catch (err) {
+        Swal.fire('เปิดกล้องไม่สำเร็จ', String(err), 'error');
+        resetButtons();
+      }
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+          isScanning = false;
+          html5QrCode.clear();
+          resetButtons();
+        }).catch(() => resetButtons());
+      }
+    }
+
+    function resetButtons() {
+      document.getElementById('btn-start').classList.remove('hidden');
+      document.getElementById('btn-stop').classList.add('hidden');
+      document.getElementById('camera-placeholder').style.display = 'block';
+    }
+
+    function onScanSuccess(decodedText) {
+      if (cooldown || decodedText === lastToken) return;
+      lastToken = decodedText;
+      cooldown = true;
+      sendToBackend(decodedText, null);
+      setTimeout(() => { cooldown = false; lastToken = ""; }, 3000);
+    }
+
+    function manualCheckIn() {
+      const id = document.getElementById('manual-id').value.trim().toUpperCase();
+      if (!id) return;
+      sendToBackend(null, id);
+      document.getElementById('manual-id').value = '';
+    }
+
+    async function sendToBackend(qrToken, manualStudentId) {
+      const resultDiv = document.getElementById('scan-result');
+      const card = document.getElementById('result-card');
+      resultDiv.classList.remove('hidden');
+      card.className = 'p-4 rounded-2xl text-center border-2 border-gray-300 bg-gray-50';
+      document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emeraldDark"></i>';
+      document.getElementById('result-name').innerText = 'กำลังบันทึกข้อมูล...';
+      document.getElementById('result-class').innerText = '';
+      document.getElementById('result-status').innerText = 'รอสักครู่';
+      document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-gray-400 inline-block';
+
+      try {
+        // ใช้ text/plain เพื่อเลี่ยงปัญหา CORS Preflight ของ Google Apps Script
+        const response = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ qrToken: qrToken, manualStudentId: manualStudentId })
+        });
+        const res = await response.json();
+
+        if (res.success) {
+          playSound('success');
+          showResult(res.data.name, 'ชั้นเรียน: ' + res.data.class, res.data.status, true);
+        } else {
+          playSound('error');
+          showResult(res.message, 'กรุณาตรวจสอบอีกครั้ง', 'ไม่สำเร็จ', false);
+        }
+      } catch (err) {
+        playSound('error');
+        showResult('เชื่อมต่อฐานข้อมูลไม่ได้', 'ตรวจสอบลิงก์ /exec หรืออินเทอร์เน็ต', 'ERROR', false);
+      }
+    }
+
+    function showResult(name, subtext, status, isSuccess) {
+      const card = document.getElementById('result-card');
+      document.getElementById('result-name').innerText = name;
+      document.getElementById('result-class').innerText = subtext;
+      document.getElementById('result-status').innerText = status;
+
+      if (isSuccess && status === 'มาเรียน') {
+        card.className = 'p-4 rounded-2xl text-center border-2 border-emerald-500 bg-emerald-50';
+        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600"></i>';
+        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-emerald-600 inline-block';
+      } else if (isSuccess && status === 'มาสาย') {
+        card.className = 'p-4 rounded-2xl text-center border-2 border-amber-500 bg-amber-50';
+        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-clock text-amber-500"></i>';
+        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-amber-500 inline-block';
+      } else {
+        card.className = 'p-4 rounded-2xl text-center border-2 border-red-500 bg-red-50';
+        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-times-circle text-red-500"></i>';
+        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-red-500 inline-block';
+      }
+    }
+
+    function playSound(type) {
+      const audio = document.getElementById(type === 'success' ? 'sound-success' : 'sound-error');
+      if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
+    }
+  </script>
+</body>
+</html>
