@@ -1,27 +1,42 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สแกนเช็กชื่อ - TADIKA SMART ATTENDANCE</title>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>TADIKA SMART ATTENDANCE</title>
+
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Libraries -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             emeraldDark: '#064e3b',
+            emeraldMid: '#047857',
             islamicGold: '#d4af37'
           },
-          fontFamily: { sans: ['Prompt', 'sans-serif'] }
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            doc: ['Sarabun', 'Prompt', 'sans-serif']
+          }
         }
       }
     }
   </script>
+
   <style>
     .islamic-pattern {
       background-color: #064e3b;
@@ -30,193 +45,536 @@
       background-size: 24px 24px;
       background-position: 0 0, 12px 12px;
     }
+    .islamic-bg-light {
+      background-color: #f4f7f5;
+      background-image: radial-gradient(rgba(6, 78, 59, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+
+    @media print {
+      body { background: white !important; }
+      body * { visibility: hidden; }
+      .print-section-active, .print-section-active * { visibility: visible; }
+      .print-section-active {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .no-print { display: none !important; }
+      @page { margin: 1cm; }
+    }
   </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen p-4">
+<body class="islamic-bg-light font-sans antialiased text-gray-800">
 
-  <div class="max-w-md mx-auto space-y-4">
-    <!-- การ์ดสแกน QR -->
-    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-      <div class="islamic-pattern text-white px-5 py-4 text-center border-b-2 border-islamicGold">
-        <div class="text-islamicGold text-xs font-semibold mb-1">
-          <i class="fa-solid fa-mosque mr-1"></i> TADIKA SMART ATTENDANCE
+  <!-- ==================== 1. หน้าจอเข้าสู่ระบบ (LOGIN) ==================== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 islamic-pattern">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border-2 border-islamicGold/50">
+      <div class="bg-emeraldDark text-white p-8 text-center border-b-4 border-islamicGold">
+        <div class="w-16 h-16 mx-auto rounded-full bg-islamicGold/20 border-2 border-islamicGold flex items-center justify-center mb-3 shadow-lg">
+          <i class="fa-solid fa-mosque text-3xl text-islamicGold"></i>
         </div>
-        <h1 class="text-xl font-bold"><i class="fa-solid fa-qrcode mr-2 text-islamicGold"></i>สแกนเช็กชื่อนักเรียน</h1>
+        <h1 class="text-2xl font-bold tracking-wide">TADIKA SMART</h1>
+        <p class="text-emerald-200 text-xs mt-1">ระบบเช็กชื่อและบริหารจัดการการเข้าเรียนด้วย QR Code</p>
       </div>
 
-      <div class="p-5 flex flex-col items-center">
-        <!-- กรอบกล้อง -->
-        <div id="reader" class="w-full rounded-xl overflow-hidden border-4 border-emerald-100 bg-gray-950 min-h-[280px] relative flex items-center justify-center">
-          <span class="text-gray-300 text-sm text-center px-4" id="camera-placeholder">
-            <i class="fa-solid fa-camera text-3xl text-islamicGold block mb-2"></i>
-            กดปุ่ม "เริ่มเปิดกล้อง" เพื่อสแกน
-          </span>
-        </div>
-
-        <!-- ปุ่มควบคุม -->
-        <div class="flex gap-3 mt-5 w-full justify-center">
-          <button id="btn-start" onclick="startScanner()" class="bg-emeraldDark text-white px-6 py-3 rounded-full shadow font-bold hover:bg-emerald-900 transition flex items-center gap-2">
-            <i class="fa-solid fa-camera text-islamicGold"></i> เริ่มเปิดกล้อง
-          </button>
-          <button id="btn-stop" onclick="stopScanner()" class="bg-red-600 text-white px-6 py-3 rounded-full shadow font-bold hover:bg-red-700 transition hidden flex items-center gap-2">
-            <i class="fa-solid fa-stop"></i> ปิดกล้อง
-          </button>
-        </div>
-
-        <!-- แสดงผลลัพธ์การสแกน -->
-        <div id="scan-result" class="mt-5 w-full hidden">
-          <div id="result-card" class="p-4 rounded-2xl text-center border-2 transition-all">
-            <div id="result-icon" class="text-4xl mb-1.5"></div>
-            <h3 id="result-name" class="text-lg font-bold text-gray-800">ชื่อ - สกุล</h3>
-            <p id="result-class" class="text-gray-600 text-sm">ชั้นเรียน</p>
-            <div class="mt-2.5">
-              <span id="result-status" class="px-4 py-1 rounded-full text-xs font-bold text-white inline-block">สถานะ</span>
-            </div>
+      <form id="login-form" onsubmit="handleLoginSubmit(event)" class="p-8 space-y-5">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">ชื่อผู้ใช้ / อีเมล</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-gray-400"></i>
+            <input type="text" id="login-username" required placeholder="เช่น admin" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emeraldDark">
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- เช็กชื่อด้วยรหัสนักเรียน -->
-    <div class="bg-white rounded-2xl shadow-sm p-4 border border-gray-200">
-      <h2 class="font-bold text-emeraldDark mb-2.5 text-sm">
-        <i class="fa-solid fa-keyboard mr-1.5 text-islamicGold"></i> เช็กชื่อด้วยรหัส (กรณีลืมบัตร)
-      </h2>
-      <div class="flex gap-2">
-        <input type="text" id="manual-id" placeholder="เช่น TD0001" class="border border-gray-300 rounded-xl px-3.5 py-2 w-full text-sm focus:outline-none focus:border-emeraldDark uppercase">
-        <button onclick="manualCheckIn()" class="bg-emeraldDark text-white px-5 py-2 rounded-xl font-bold text-sm hover:bg-emerald-900 whitespace-nowrap">
-          บันทึก
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">รหัสผ่าน</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-gray-400"></i>
+            <input type="password" id="login-password" required placeholder="กรอกรหัสผ่าน" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emeraldDark">
+          </div>
+        </div>
+        <button type="submit" id="btn-login" class="w-full bg-emeraldDark hover:bg-emerald-900 text-white font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-to-bracket text-islamicGold"></i> เข้าสู่ระบบ
         </button>
+        <p class="text-[11px] text-center text-gray-400">บัญชีเริ่มต้นสำหรับผู้ดูแล: <b>admin</b> / <b>admin1234</b></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 2. หน้าจอระบบหลัก (MAIN APP) ==================== -->
+  <div id="app-screen" class="hidden h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="islamic-pattern text-white w-64 flex-shrink-0 hidden md:flex flex-col transition-all duration-300 z-40 absolute md:relative h-full shadow-2xl border-r border-islamicGold/30 no-print">
+      <div class="p-5 flex items-center justify-between border-b border-emerald-800/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-islamicGold/20 border border-islamicGold flex items-center justify-center">
+            <i class="fa-solid fa-mosque text-lg text-islamicGold"></i>
+          </div>
+          <div>
+            <h1 class="text-base font-bold leading-tight text-white">TADIKA SMART</h1>
+            <p class="text-[11px] text-islamicGold">ระบบเช็กชื่อนักเรียนตาดีกา</p>
+          </div>
+        </div>
+        <button onclick="toggleSidebar()" class="md:hidden text-emerald-200 hover:text-white">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        <a href="javascript:void(0)" onclick="navigateTo('dashboard')" class="nav-item flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="dashboard">
+          <i class="fa-solid fa-chart-pie w-5 text-center"></i> <span>แดชบอร์ดภาพรวม</span>
+        </a>
+        <a href="javascript:void(0)" onclick="navigateTo('scanner')" class="nav-item flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="scanner">
+          <i class="fa-solid fa-qrcode w-5 text-center text-islamicGold"></i> <span>สแกนเช็กชื่อ</span>
+        </a>
+        <a href="javascript:void(0)" onclick="navigateTo('students')" class="nav-item role-admin-teacher flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="students">
+          <i class="fa-solid fa-user-graduate w-5 text-center"></i> <span>ทะเบียนนักเรียน</span>
+        </a>
+        <a href="javascript:void(0)" onclick="navigateTo('qrcode')" class="nav-item role-admin-only flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="qrcode">
+          <i class="fa-solid fa-id-card w-5 text-center"></i> <span>พิมพ์บัตร QR Code</span>
+        </a>
+        <a href="javascript:void(0)" onclick="navigateTo('reports')" class="nav-item role-admin-teacher flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="reports">
+          <i class="fa-solid fa-file-contract w-5 text-center"></i> <span>รายงานและสรุปผล</span>
+        </a>
+        <div class="pt-3 mt-3 border-t border-emerald-800/80 role-admin-only">
+          <a href="javascript:void(0)" onclick="navigateTo('settings')" class="nav-item flex items-center gap-3 py-2.5 px-4 rounded-xl text-emerald-100 hover:bg-emerald-800/70 transition" data-target="settings">
+            <i class="fa-solid fa-sliders w-5 text-center text-islamicGold"></i> <span>ตั้งค่าศูนย์และผู้ใช้</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="p-4 border-t border-emerald-800/80 bg-emerald-950/40 text-xs space-y-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-emerald-800 flex items-center justify-center text-islamicGold font-bold">
+            <i class="fa-solid fa-user-tie"></i>
+          </div>
+          <div class="overflow-hidden">
+            <p id="user-display-name" class="font-semibold text-white truncate">ผู้ใช้งาน</p>
+            <p id="user-role-badge" class="text-[11px] text-islamicGold">Admin</p>
+          </div>
+        </div>
+        <button onclick="handleLogout()" class="w-full bg-red-800/80 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+        </button>
+      </div>
+    </aside>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden no-print" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+      <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-6 z-20 border-b-2 border-islamicGold/40 no-print">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSidebar()" class="md:hidden w-10 h-10 rounded-lg bg-emerald-50 text-emeraldDark flex items-center justify-center">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+          <div>
+            <h2 id="topbar-title" class="text-lg font-bold text-emeraldDark leading-tight">แดชบอร์ดภาพรวม</h2>
+            <p id="center-name-display" class="text-xs text-gray-500 truncate max-w-[220px] sm:max-w-md">ศูนย์การศึกษาอิสลามประจำมัสยิด (ตาดีกา)</p>
+          </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full text-xs text-emeraldDark font-medium">
+          <i class="fa-regular fa-clock text-islamicGold"></i>
+          <span id="live-clock">--:-- น.</span>
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
+
+        <!-- ========== PAGE 1: DASHBOARD ========== -->
+        <section id="page-dashboard" class="page-section space-y-6">
+          <div class="islamic-pattern rounded-2xl p-5 md:p-6 text-white shadow-lg border border-islamicGold/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <div class="inline-flex items-center gap-2 bg-islamicGold/20 border border-islamicGold/50 text-islamicGold text-xs font-semibold px-3 py-1 rounded-full mb-2">
+                <i class="fa-solid fa-star-and-crescent"></i> รายงานการมาเรียนประจำวัน
+              </div>
+              <h2 class="text-2xl font-bold" id="dash-center-name">ศูนย์การศึกษาอิสลามประจำมัสยิด (ตาดีกา)</h2>
+              <p class="text-emerald-100 text-sm mt-1"><i class="fa-regular fa-calendar-days mr-1.5 text-islamicGold"></i><span id="dash-date-display">กำลังโหลด...</span></p>
+            </div>
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+              <button onclick="navigateTo('scanner')" class="flex-1 md:flex-none bg-islamicGold text-emeraldDark px-4 py-2.5 rounded-xl font-bold shadow hover:bg-yellow-400 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-qrcode"></i> สแกนเช็กชื่อ
+              </button>
+              <button onclick="loadDashboardData()" class="bg-emerald-800/80 border border-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+              <button onclick="confirmFinalizeAttendance()" class="role-admin-only flex-1 md:flex-none bg-red-700 hover:bg-red-800 text-white px-4 py-2.5 rounded-xl font-bold shadow transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock"></i> ปิดรอบเช็กชื่อ
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-emeraldDark">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>นักเรียนทั้งหมด</span><i class="fa-solid fa-users text-emeraldDark"></i></div>
+              <p class="text-3xl font-bold text-gray-800" id="stat-total">0</p>
+              <p class="text-[11px] text-emerald-700 mt-1 font-medium">มาเรียน <span id="stat-percent">0</span>%</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-emerald-500">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>มาเรียน</span><i class="fa-solid fa-check-circle text-emerald-500"></i></div>
+              <p class="text-3xl font-bold text-emerald-600" id="stat-present">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-amber-500">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>มาสาย</span><i class="fa-solid fa-clock text-amber-500"></i></div>
+              <p class="text-3xl font-bold text-amber-600" id="stat-late">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-sky-500">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>ลา</span><i class="fa-solid fa-envelope-open-text text-sky-500"></i></div>
+              <p class="text-3xl font-bold text-sky-600" id="stat-leave">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-red-500">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>ขาดเรียน</span><i class="fa-solid fa-user-xmark text-red-500"></i></div>
+              <p class="text-3xl font-bold text-red-600" id="stat-absent">0</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-4 border-t-4 border-gray-300">
+              <div class="flex justify-between text-gray-500 text-xs font-semibold mb-1"><span>ยังไม่เช็กชื่อ</span><i class="fa-solid fa-hourglass-half text-gray-400"></i></div>
+              <p class="text-3xl font-bold text-gray-500" id="stat-unchecked">0</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200">
+              <div class="bg-emeraldDark text-white px-5 py-3.5"><h3 class="font-semibold text-sm"><i class="fa-solid fa-layer-group mr-2 text-islamicGold"></i> สรุปแยกตามชั้นเรียน</h3></div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left">
+                  <thead class="bg-emerald-50 text-emeraldDark text-xs">
+                    <tr><th class="px-4 py-3">ชั้นเรียน</th><th class="px-3 py-3 text-center">ทั้งหมด</th><th class="px-3 py-3 text-center">มา</th><th class="px-3 py-3 text-center">สาย</th><th class="px-3 py-3 text-center">ขาด/ลา</th></tr>
+                  </thead>
+                  <tbody id="class-summary-body" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200">
+              <div class="bg-emeraldDark text-white px-5 py-3.5"><h3 class="font-semibold text-sm"><i class="fa-solid fa-clock-rotate-left mr-2 text-islamicGold"></i> รายการเช็กชื่อล่าสุด</h3></div>
+              <div class="overflow-x-auto max-h-[340px] overflow-y-auto">
+                <table class="min-w-full text-sm text-left">
+                  <thead class="bg-emerald-50 text-emeraldDark text-xs sticky top-0">
+                    <tr><th class="px-4 py-3">เวลา</th><th class="px-4 py-3">ชื่อ - สกุล</th><th class="px-3 py-3">ชั้น</th><th class="px-3 py-3 text-center">สถานะ</th></tr>
+                  </thead>
+                  <tbody id="recent-logs-body" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- รายชื่อผู้ขาดเรียนวันนี้ (แสดงเมื่อมีคนขาดเรียน) -->
+          <div id="dash-absent-box" class="hidden bg-white rounded-2xl shadow-sm overflow-hidden border border-red-200">
+            <div class="bg-red-700 text-white px-5 py-3 flex justify-between items-center">
+              <h3 class="font-semibold text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i> รายชื่อนักเรียนขาดเรียนวันนี้</h3>
+              <span id="dash-absent-count" class="bg-white/20 px-2.5 py-0.5 rounded-full text-xs font-bold">0 คน</span>
+            </div>
+            <div id="dash-absent-list" class="p-4 flex flex-wrap gap-2 text-xs"></div>
+          </div>
+        </section>
+
+        <!-- ========== PAGE 2: SCANNER ========== -->
+        <section id="page-scanner" class="page-section hidden max-w-xl mx-auto space-y-5">
+          <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
+            <div class="islamic-pattern text-white px-5 py-4 text-center border-b-2 border-islamicGold">
+              <h2 class="text-xl font-bold"><i class="fa-solid fa-qrcode mr-2 text-islamicGold"></i> สแกนเช็กชื่อนักเรียน</h2>
+              <p class="text-xs text-emerald-100 mt-1" id="scan-session-info">รอบ: ช่วงเช้า</p>
+            </div>
+            <div class="p-5 flex flex-col items-center">
+              <div id="reader" class="w-full max-w-sm rounded-xl overflow-hidden border-4 border-emerald-100 bg-gray-950 min-h-[280px] relative flex items-center justify-center">
+                <span class="text-gray-300 text-sm text-center px-4" id="camera-placeholder">
+                  <i class="fa-solid fa-camera text-3xl text-islamicGold block mb-2"></i>
+                  กดปุ่ม "เริ่มเปิดกล้อง" เพื่อสแกน QR Code
+                </span>
+              </div>
+              <div class="flex flex-wrap justify-center gap-3 mt-5 w-full">
+                <button id="btn-start-scan" onclick="startScanner()" class="bg-emeraldDark text-white px-6 py-3 rounded-full shadow font-bold hover:bg-emerald-900 transition flex items-center gap-2">
+                  <i class="fa-solid fa-camera text-islamicGold"></i> เริ่มเปิดกล้อง
+                </button>
+                <button id="btn-stop-scan" onclick="stopScanner()" class="bg-red-600 text-white px-6 py-3 rounded-full shadow font-bold hover:bg-red-700 transition hidden flex items-center gap-2">
+                  <i class="fa-solid fa-stop"></i> ปิดกล้อง
+                </button>
+              </div>
+              <div id="scan-result" class="mt-5 w-full max-w-sm hidden">
+                <div id="result-card" class="p-5 rounded-2xl text-center border-2 transition-all">
+                  <div id="result-icon" class="text-5xl mb-2"></div>
+                  <h3 id="result-name" class="text-xl font-bold text-gray-800"></h3>
+                  <p id="result-class" class="text-gray-600 text-sm mt-0.5"></p>
+                  <div class="mt-3"><span id="result-status" class="px-5 py-1.5 rounded-full text-sm font-bold text-white inline-block"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm p-5 border border-gray-200">
+            <h3 class="font-bold text-emeraldDark mb-3 text-sm"><i class="fa-solid fa-keyboard mr-2 text-islamicGold"></i> เช็กชื่อด้วยรหัส (กรณีลืมบัตร)</h3>
+            <div class="flex gap-2">
+              <input type="text" id="manual-student-id" placeholder="กรอกรหัส เช่น TD0001" class="border border-gray-300 rounded-xl px-4 py-2.5 w-full text-sm focus:outline-none focus:border-emeraldDark uppercase">
+              <button onclick="manualCheckIn()" class="bg-emeraldDark text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-900 whitespace-nowrap">บันทึก</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PAGE 3: STUDENTS ========== -->
+        <section id="page-students" class="page-section hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-emeraldDark flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-emeraldDark"><i class="fa-solid fa-user-graduate mr-2 text-islamicGold"></i> ทะเบียนนักเรียน (<span id="student-count-badge">0</span> คน)</h2>
+              <p class="text-xs text-gray-500 mt-1">จัดการรายชื่อนักเรียน นำเข้าไฟล์ Excel ได้ทั้งแบบรายชั้นและทั้งหมด</p>
+            </div>
+            <div class="flex flex-wrap gap-2 role-admin-only">
+              <button onclick="downloadExcelTemplate()" class="bg-amber-50 border border-islamicGold text-amber-900 px-3.5 py-2 rounded-xl text-sm font-semibold hover:bg-amber-100">
+                <i class="fa-solid fa-file-arrow-down text-islamicGold mr-1"></i> โหลดเทมเพลต Excel
+              </button>
+              <button onclick="openImportModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow hover:bg-emerald-700">
+                <i class="fa-solid fa-file-excel mr-1"></i> นำเข้า Excel
+              </button>
+              <button onclick="openStudentModal()" class="bg-emeraldDark text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-emerald-900">
+                <i class="fa-solid fa-user-plus text-islamicGold mr-1"></i> เพิ่มนักเรียน
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400"></i>
+              <input type="text" id="student-search-input" oninput="filterStudentsTable()" placeholder="ค้นหาด้วยรหัส ชื่อ นามสกุล หรือผู้ปกครอง..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emeraldDark">
+            </div>
+            <select id="student-class-filter" onchange="filterStudentsTable()" class="dynamic-class-select border border-gray-300 rounded-xl px-4 py-2 text-sm min-w-[180px]" data-include-all="true"></select>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm text-left">
+                <thead class="bg-emeraldDark text-white text-xs">
+                  <tr><th class="px-4 py-3.5">รหัส</th><th class="px-4 py-3.5">ชื่อ - นามสกุล</th><th class="px-4 py-3.5">ชั้นเรียน</th><th class="px-4 py-3.5">ผู้ปกครอง / เบอร์โทร</th><th class="px-4 py-3.5 text-center role-admin-only">จัดการ</th></tr>
+                </thead>
+                <tbody id="students-table-body" class="divide-y divide-gray-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PAGE 4: QR CODE ========== -->
+        <section id="page-qrcode" class="page-section hidden space-y-4">
+          <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-islamicGold flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
+            <div>
+              <h2 class="text-xl font-bold text-emeraldDark"><i class="fa-solid fa-id-card mr-2 text-islamicGold"></i> พิมพ์บัตรประจำตัวนักเรียน (QR Code)</h2>
+              <p class="text-xs text-gray-500 mt-1">จัดหน้ากระดาษ A4 แนะนำให้เปิด "Background graphics" ตอนสั่งพิมพ์หรือบันทึก PDF</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <select id="qr-class-filter" onchange="renderFilteredQRCards()" class="dynamic-class-select border border-gray-300 rounded-xl px-3 py-2 text-sm" data-include-all="true"></select>
+              <button onclick="loadStudentsForQR()" class="bg-gray-100 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold hover:bg-gray-200"><i class="fa-solid fa-rotate-right mr-1"></i> โหลดใหม่</button>
+              <button onclick="printQRCards()" class="bg-emeraldDark text-white px-5 py-2 rounded-xl text-sm font-bold shadow hover:bg-emerald-900"><i class="fa-solid fa-print text-islamicGold mr-1"></i> พิมพ์บัตร / PDF</button>
+            </div>
+          </div>
+          <div id="qr-print-area" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 pb-16"></div>
+        </section>
+
+        <!-- ========== PAGE 5: REPORTS ========== -->
+        <section id="page-reports" class="page-section hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-emeraldDark space-y-4 no-print">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <h2 class="text-xl font-bold text-emeraldDark"><i class="fa-solid fa-file-contract mr-2 text-islamicGold"></i> รายงานสรุปการมาเรียน</h2>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="exportReportExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-emerald-700"><i class="fa-solid fa-file-excel mr-1"></i> ส่งออก Excel</button>
+                <button onclick="printReportPDF()" class="bg-emeraldDark text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-emerald-900"><i class="fa-solid fa-print text-islamicGold mr-1"></i> พิมพ์รายงาน / PDF</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t">
+              <div><label class="block text-xs font-semibold text-gray-600 mb-1">ตั้งแต่วันที่</label><input type="date" id="rep-start-date" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></div>
+              <div><label class="block text-xs font-semibold text-gray-600 mb-1">ถึงวันที่</label><input type="date" id="rep-end-date" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></div>
+              <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชั้นเรียน</label><select id="rep-class" class="dynamic-class-select w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" data-include-all="true"></select></div>
+              <div class="flex items-end"><button onclick="fetchReportData()" class="w-full bg-islamicGold text-emeraldDark font-bold py-2 px-4 rounded-xl shadow hover:bg-yellow-400"><i class="fa-solid fa-magnifying-glass mr-1"></i> ดึงข้อมูล</button></div>
+            </div>
+          </div>
+
+          <div id="report-print-area" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200 font-doc">
+            <div class="text-center border-b-2 border-emeraldDark pb-4 mb-5">
+              <div class="text-emeraldDark text-2xl mb-1"><i class="fa-solid fa-mosque"></i></div>
+              <h3 class="text-xl font-bold text-gray-900" id="rep-doc-center">ศูนย์การศึกษาอิสลามประจำมัสยิด (ตาดีกา)</h3>
+              <p class="text-base font-semibold text-emeraldDark mt-1">รายงานสถิติการเข้าเรียนของนักเรียน (ช่วงเช้า)</p>
+              <p class="text-sm text-gray-600 mt-1" id="rep-doc-meta"></p>
+            </div>
+            <div class="grid grid-cols-4 gap-3 mb-5 text-center text-sm">
+              <div class="border border-emerald-200 bg-emerald-50/50 rounded-xl p-2"><p class="text-gray-600 text-xs">มาเรียน</p><p class="text-xl font-bold text-emerald-700" id="rep-sum-present">0</p></div>
+              <div class="border border-amber-200 bg-amber-50/50 rounded-xl p-2"><p class="text-gray-600 text-xs">มาสาย</p><p class="text-xl font-bold text-amber-600" id="rep-sum-late">0</p></div>
+              <div class="border border-sky-200 bg-sky-50/50 rounded-xl p-2"><p class="text-gray-600 text-xs">ลา</p><p class="text-xl font-bold text-sky-600" id="rep-sum-leave">0</p></div>
+              <div class="border border-red-200 bg-red-50/50 rounded-xl p-2"><p class="text-gray-600 text-xs">ขาดเรียน</p><p class="text-xl font-bold text-red-600" id="rep-sum-absent">0</p></div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm border-collapse border border-gray-300">
+                <thead class="bg-emeraldDark text-white">
+                  <tr>
+                    <th class="border border-gray-300 px-2 py-2 text-center w-10">ที่</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center">วันที่</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center">รหัส</th>
+                    <th class="border border-gray-300 px-3 py-2 text-left">ชื่อ - นามสกุล</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center">ชั้น</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center">เวลา</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center">สถานะ</th>
+                    <th class="border border-gray-300 px-2 py-2 text-left">หมายเหตุ</th>
+                    <th class="border border-gray-300 px-2 py-2 text-center no-print">แก้</th>
+                  </tr>
+                </thead>
+                <tbody id="report-table-body"></tbody>
+              </table>
+            </div>
+            <div class="grid grid-cols-2 gap-8 mt-14 pt-4 text-center text-sm break-inside-avoid">
+              <div class="space-y-1">
+                <p class="mb-10">ลงชื่อ..........................................................</p>
+                <p class="font-bold text-gray-900">(<span id="rep-sign-teacher">............................................</span>)</p>
+                <p class="text-gray-600">ครูประจำชั้น / ผู้รายงาน</p>
+              </div>
+              <div class="space-y-1">
+                <p class="mb-10">ลงชื่อ..........................................................</p>
+                <p class="font-bold text-gray-900">(<span id="rep-sign-chairman">............................................</span>)</p>
+                <p class="text-gray-600">ประธานศูนย์การศึกษาอิสลามประจำมัสยิด</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PAGE 6: SETTINGS & USERS ========== -->
+        <section id="page-settings" class="page-section hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- ตั้งค่าศูนย์ -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="bg-emeraldDark text-white px-5 py-4 flex items-center gap-2"><i class="fa-solid fa-mosque text-islamicGold"></i><h3 class="font-bold">ตั้งค่าข้อมูลศูนย์ฯ และเวลาเช็กชื่อ</h3></div>
+              <form onsubmit="submitSettingsForm(event)" class="p-6 space-y-4">
+                <div><label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อศูนย์การศึกษาอิสลามประจำมัสยิด</label><input type="text" id="set-center-name" required class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"></div>
+                <div><label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อประธานศูนย์ฯ (แสดงช่องลงชื่อในรายงาน)</label><input type="text" id="set-chairman-name" required class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"></div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div><label class="block text-xs font-semibold text-gray-700 mb-1">เริ่มเช็กชื่อ</label><input type="time" id="set-start-time" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></div>
+                  <div><label class="block text-xs font-semibold text-gray-700 mb-1">สายหลังเวลา</label><input type="time" id="set-late-after" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></div>
+                  <div><label class="block text-xs font-semibold text-gray-700 mb-1">ปิดรอบเวลา</label><input type="time" id="set-close-time" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></div>
+                </div>
+                <div><label class="block text-xs font-semibold text-gray-700 mb-1">อีเมลผู้ดูแล (รับแจ้งเตือนนักเรียนขาดเรียน)</label><input type="email" id="set-admin-email" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm"></div>
+                <button type="submit" class="w-full bg-emeraldDark text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-900"><i class="fa-solid fa-floppy-disk mr-1.5 text-islamicGold"></i> บันทึกการตั้งค่าศูนย์ฯ</button>
+              </form>
+            </div>
+
+            <!-- จัดการชั้นเรียนและครูประจำชั้น -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="bg-emeraldDark text-white px-5 py-4 flex items-center gap-2"><i class="fa-solid fa-chalkboard-user text-islamicGold"></i><h3 class="font-bold">จัดการชั้นเรียนและครูประจำชั้น</h3></div>
+              <div class="p-6 space-y-4">
+                <form onsubmit="submitClassTeacherForm(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                  <input type="text" id="cls-name-input" required placeholder="ชื่อชั้น เช่น ชั้นปีที่ 1" class="sm:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                  <input type="text" id="cls-teacher-input" required placeholder="ชื่อครูประจำชั้น" class="sm:col-span-2 border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                  <button type="submit" class="bg-islamicGold text-emeraldDark font-bold rounded-xl px-3 py-2 text-sm hover:bg-yellow-400">บันทึก</button>
+                </form>
+                <div class="border rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+                  <table class="min-w-full text-sm text-left">
+                    <thead class="bg-emerald-50 text-emeraldDark text-xs"><tr><th class="px-4 py-2.5">ชั้นเรียน</th><th class="px-4 py-2.5">ครูประจำชั้น</th><th class="px-3 py-2.5 text-center">จัดการ</th></tr></thead>
+                    <tbody id="settings-classes-body" class="divide-y divide-gray-100"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- จัดการผู้ใช้งานระบบ (Users) -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-emeraldDark text-white px-5 py-4 flex items-center gap-2"><i class="fa-solid fa-users-gear text-islamicGold"></i><h3 class="font-bold">จัดการบัญชีผู้ใช้งาน (Admin / Teacher / Attendance Staff)</h3></div>
+            <div class="p-6 space-y-4">
+              <form onsubmit="submitUserForm(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                <input type="text" id="usr-email" required placeholder="ชื่อผู้ใช้/อีเมล" class="border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                <input type="text" id="usr-name" required placeholder="ชื่อที่แสดง" class="border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                <select id="usr-role" class="border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                  <option value="Teacher">Teacher (ครู)</option>
+                  <option value="Attendance Staff">Attendance Staff (เจ้าหน้าที่สแกน)</option>
+                  <option value="Admin">Admin (ผู้ดูแลระบบ)</option>
+                </select>
+                <input type="password" id="usr-password" placeholder="รหัสผ่าน (เว้นว่างถ้าไม่เปลี่ยน)" class="border border-gray-300 rounded-xl px-3 py-2 text-sm">
+                <button type="submit" class="bg-emeraldDark text-white font-bold rounded-xl px-3 py-2 text-sm hover:bg-emerald-900">เพิ่ม / อัปเดตผู้ใช้</button>
+              </form>
+              <div class="border rounded-xl overflow-x-auto">
+                <table class="min-w-full text-sm text-left">
+                  <thead class="bg-emerald-50 text-emeraldDark text-xs"><tr><th class="px-4 py-2.5">ชื่อผู้ใช้</th><th class="px-4 py-2.5">ชื่อที่แสดง</th><th class="px-4 py-2.5">สิทธิ์</th><th class="px-4 py-2.5">สถานะ</th><th class="px-3 py-2.5 text-center">จัดการ</th></tr></thead>
+                  <tbody id="settings-users-body" class="divide-y divide-gray-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+  <!-- Modal เพิ่ม/แก้ไขนักเรียน -->
+  <div id="student-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="bg-emeraldDark px-6 py-4 flex justify-between items-center text-white">
+        <h3 id="student-modal-title" class="font-bold text-base">เพิ่มนักเรียนใหม่</h3>
+        <button onclick="closeStudentModal()"><i class="fa-solid fa-times text-xl"></i></button>
+      </div>
+      <form id="student-form" class="p-6 space-y-4" onsubmit="submitStudentForm(event)">
+        <input type="hidden" id="sf-id">
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">คำนำหน้า</label><select id="sf-prefix" class="w-full border rounded-xl px-3 py-2 text-sm"><option value="ด.ช.">ด.ช.</option><option value="ด.ญ.">ด.ญ.</option><option value="นาย">นาย</option><option value="นางสาว">นางสาว</option></select></div>
+          <div class="col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อจริง *</label><input type="text" id="sf-fname" required class="w-full border rounded-xl px-3 py-2 text-sm"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">นามสกุล *</label><input type="text" id="sf-lname" required class="w-full border rounded-xl px-3 py-2 text-sm"></div>
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชั้นเรียน *</label><select id="sf-class" required class="dynamic-class-select w-full border rounded-xl px-3 py-2 text-sm" data-include-all="false"></select></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">ชื่อผู้ปกครอง</label><input type="text" id="sf-parent" class="w-full border rounded-xl px-3 py-2 text-sm"></div>
+          <div><label class="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์</label><input type="text" id="sf-phone" class="w-full border rounded-xl px-3 py-2 text-sm"></div>
+        </div>
+        <div class="pt-4 flex justify-end gap-2 border-t">
+          <button type="button" onclick="closeStudentModal()" class="bg-gray-100 px-4 py-2 rounded-xl text-sm">ยกเลิก</button>
+          <button type="submit" class="bg-emeraldDark text-white px-6 py-2 rounded-xl text-sm font-bold">บันทึกข้อมูล</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal นำเข้า Excel -->
+  <div id="import-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
+      <div class="bg-emeraldDark px-6 py-4 flex justify-between items-center text-white">
+        <h3 class="font-bold text-base"><i class="fa-solid fa-file-excel mr-2 text-islamicGold"></i>นำเข้าข้อมูลนักเรียนจาก Excel</h3>
+        <button onclick="closeImportModal()"><i class="fa-solid fa-times text-xl"></i></button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900">
+          <p class="font-bold">คอลัมน์ในไฟล์: คำนำหน้า | ชื่อ | นามสกุล | ชั้นเรียน | ชื่อผู้ปกครอง | เบอร์โทร</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">รูปแบบการนำเข้า</label>
+          <select id="import-mode" onchange="toggleImportClassSelect()" class="w-full border rounded-xl px-3 py-2 text-sm">
+            <option value="ALL">นำเข้าทั้งหมด (ใช้ชั้นเรียนตามไฟล์ Excel)</option>
+            <option value="SINGLE_CLASS">นำเข้าเฉพาะรายชั้น (บังคับชั้นที่เลือกด้านล่าง)</option>
+          </select>
+        </div>
+        <div id="import-target-class-wrap" class="hidden">
+          <label class="block text-xs font-semibold text-gray-700 mb-1">เลือกชั้นเรียนปลายทาง</label>
+          <select id="import-target-class" class="dynamic-class-select w-full border rounded-xl px-3 py-2 text-sm" data-include-all="false"></select>
+        </div>
+        <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" onchange="previewExcelFile(event)" class="w-full text-sm border border-dashed border-emerald-400 rounded-xl p-3 bg-gray-50">
+        <div id="import-preview-box" class="hidden bg-gray-50 border rounded-xl p-3 max-h-36 overflow-y-auto text-xs">
+          <p class="font-bold text-emeraldDark mb-1" id="import-preview-count"></p>
+          <ul id="import-preview-list" class="space-y-1 text-gray-600"></ul>
+        </div>
+        <div class="pt-3 flex justify-end gap-2 border-t">
+          <button type="button" onclick="closeImportModal()" class="bg-gray-100 px-4 py-2 rounded-xl text-sm">ยกเลิก</button>
+          <button type="button" id="btn-confirm-import" onclick="executeExcelImport()" disabled class="bg-emerald-600 disabled:bg-gray-300 text-white px-5 py-2 rounded-xl text-sm font-bold">ยืนยันนำเข้า</button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- เสียงแจ้งเตือน -->
-  <audio id="sound-success" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="sound-error" preload="auto">
-    <source src="https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3" type="audio/mpeg">
-  </audio>
+  <audio id="sound-success" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg"></audio>
+  <audio id="sound-error" preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3" type="audio/mpeg"></audio>
 
-  <script>
-    // ====== วางลิงก์ Web App URL (/exec) ของคุณที่นี่ ======
-    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw6WlYkNJ_SKNpfJkjzEeL6swrY0E31PTfPu6yyzHAPg7xfkkV5__JKrJvC2qFiZ6T8/exec";
-    // =======================================================
-
-    let html5QrCode = null;
-    let isScanning = false;
-    let lastToken = "";
-    let cooldown = false;
-
-    async function startScanner() {
-      if (isScanning) return;
-      document.getElementById('scan-result').classList.add('hidden');
-      document.getElementById('btn-start').classList.add('hidden');
-      document.getElementById('btn-stop').classList.remove('hidden');
-      document.getElementById('camera-placeholder').style.display = 'none';
-
-      html5QrCode = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 230, height: 230 }, aspectRatio: 1.0 };
-
-      try {
-        await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {});
-        isScanning = true;
-      } catch (err) {
-        Swal.fire('เปิดกล้องไม่สำเร็จ', String(err), 'error');
-        resetButtons();
-      }
-    }
-
-    function stopScanner() {
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(() => {
-          isScanning = false;
-          html5QrCode.clear();
-          resetButtons();
-        }).catch(() => resetButtons());
-      }
-    }
-
-    function resetButtons() {
-      document.getElementById('btn-start').classList.remove('hidden');
-      document.getElementById('btn-stop').classList.add('hidden');
-      document.getElementById('camera-placeholder').style.display = 'block';
-    }
-
-    function onScanSuccess(decodedText) {
-      if (cooldown || decodedText === lastToken) return;
-      lastToken = decodedText;
-      cooldown = true;
-      sendToBackend(decodedText, null);
-      setTimeout(() => { cooldown = false; lastToken = ""; }, 3000);
-    }
-
-    function manualCheckIn() {
-      const id = document.getElementById('manual-id').value.trim().toUpperCase();
-      if (!id) return;
-      sendToBackend(null, id);
-      document.getElementById('manual-id').value = '';
-    }
-
-    async function sendToBackend(qrToken, manualStudentId) {
-      const resultDiv = document.getElementById('scan-result');
-      const card = document.getElementById('result-card');
-      resultDiv.classList.remove('hidden');
-      card.className = 'p-4 rounded-2xl text-center border-2 border-gray-300 bg-gray-50';
-      document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emeraldDark"></i>';
-      document.getElementById('result-name').innerText = 'กำลังบันทึกข้อมูล...';
-      document.getElementById('result-class').innerText = '';
-      document.getElementById('result-status').innerText = 'รอสักครู่';
-      document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-gray-400 inline-block';
-
-      try {
-        // ใช้ text/plain เพื่อเลี่ยงปัญหา CORS Preflight ของ Google Apps Script
-        const response = await fetch(GAS_WEBAPP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ qrToken: qrToken, manualStudentId: manualStudentId })
-        });
-        const res = await response.json();
-
-        if (res.success) {
-          playSound('success');
-          showResult(res.data.name, 'ชั้นเรียน: ' + res.data.class, res.data.status, true);
-        } else {
-          playSound('error');
-          showResult(res.message, 'กรุณาตรวจสอบอีกครั้ง', 'ไม่สำเร็จ', false);
-        }
-      } catch (err) {
-        playSound('error');
-        showResult('เชื่อมต่อฐานข้อมูลไม่ได้', 'ตรวจสอบลิงก์ /exec หรืออินเทอร์เน็ต', 'ERROR', false);
-      }
-    }
-
-    function showResult(name, subtext, status, isSuccess) {
-      const card = document.getElementById('result-card');
-      document.getElementById('result-name').innerText = name;
-      document.getElementById('result-class').innerText = subtext;
-      document.getElementById('result-status').innerText = status;
-
-      if (isSuccess && status === 'มาเรียน') {
-        card.className = 'p-4 rounded-2xl text-center border-2 border-emerald-500 bg-emerald-50';
-        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600"></i>';
-        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-emerald-600 inline-block';
-      } else if (isSuccess && status === 'มาสาย') {
-        card.className = 'p-4 rounded-2xl text-center border-2 border-amber-500 bg-amber-50';
-        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-clock text-amber-500"></i>';
-        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-amber-500 inline-block';
-      } else {
-        card.className = 'p-4 rounded-2xl text-center border-2 border-red-500 bg-red-50';
-        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-times-circle text-red-500"></i>';
-        document.getElementById('result-status').className = 'px-4 py-1 rounded-full text-xs font-bold text-white bg-red-500 inline-block';
-      }
-    }
-
-    function playSound(type) {
-      const audio = document.getElementById(type === 'success' ? 'sound-success' : 'sound-error');
-      if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
